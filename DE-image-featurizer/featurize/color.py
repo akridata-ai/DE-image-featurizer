@@ -114,9 +114,10 @@ class ColorFeaturizer:
 
         Returns
         -------
-        np.array
-            Patch-wise feature array.
+        list
+            A list of arrays of shape (grid_size[0], grid_size[0], 3, patch_shape[0]*patch_shape[0])
         """
+        features = []
         for image in images:
             cvt_image = self.convert_image(image)
             image_patches = patchify(cvt_image, self.grid_size)
@@ -127,4 +128,5 @@ class ColorFeaturizer:
 
             patch_feature_arr = np.stack(patch_feature_arr)
             patch_feature_arr = patch_feature_arr.reshape(*self.grid_size, *patch_feature_arr.shape[1:])
-            return patch_feature_arr
+            features.append(patch_feature_arr)
+        return features
