@@ -50,9 +50,10 @@ class DownSample:
 
         Returns
         -------
-        np.array
-            A numpy array of shape (grid_size[0], grid_size[0], 3, patch_shape[0]*patch_shape[0])
+        list
+            A list of arrays of shape (grid_size[0], grid_size[0], 3, patch_shape[0]*patch_shape[0])
         """
+        features = []
         for image in images:
             image_patches = patchify(image, self.grid_size)
             patch_feature_arr = []
@@ -62,4 +63,5 @@ class DownSample:
 
             patch_feature_arr = np.stack(patch_feature_arr)
             patch_feature_arr = patch_feature_arr.reshape(*self.grid_size, *patch_feature_arr.shape[1:])
-            return patch_feature_arr
+            features.append(patch_feature_arr)
+        return features

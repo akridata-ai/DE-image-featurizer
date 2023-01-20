@@ -13,7 +13,6 @@ class HOG:
         ----------
         https://github.com/canxkoz/HOG-Classifier/blob/caf20c5fe427983a5a373cce0bb299a98d75e8f4/HOG.py
 
-
         Parameters
         ----------
         orientations : int
@@ -147,8 +146,10 @@ class LBP:
 
         Returns
         -------
-        np.array
+        list
+            A list of arrays of shape (grid_size[0], grid_size[0], 3, patch_shape[0]*patch_shape[0])
         """
+        features = []
         for image in images:
             image_patches = patchify(image, self.grid_size)
             patch_feature_arr = []
@@ -158,4 +159,5 @@ class LBP:
 
             patch_feature_arr = np.stack(patch_feature_arr)
             patch_feature_arr = patch_feature_arr.reshape(*self.grid_size, *patch_feature_arr.shape[1:])
-            return patch_feature_arr
+            features.append(patch_feature_arr)
+        return features
