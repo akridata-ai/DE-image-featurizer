@@ -13,7 +13,6 @@ class HOG:
         References
         ----------
         https://github.com/canxkoz/HOG-Classifier/blob/caf20c5fe427983a5a373cce0bb299a98d75e8f4/HOG.py
-
         Parameters
         ----------
         orientations : int
@@ -34,12 +33,10 @@ class HOG:
         """
         The hog_featurizer function takes in an image and returns a histogram of oriented
         gradients (HOG) feature vector for that image.
-
         Parameters
         ----------
         image: np.array
             RGB image to be converted having dtype uint8
-
         Returns
         -------
         np.array
@@ -57,12 +54,10 @@ class HOG:
     def fit_transform(self, images):
         """
         The fit_transform function takes in a list of images and returns the feature vectors for each image.
-
         Parameters
         ----------
         images : np.array or list
             Images for featurization
-
         Returns
         -------
         np.array
@@ -87,7 +82,6 @@ class LBP:
         References
         ----------
         https://scikit-image.org/docs/stable/auto_examples/features_detection/plot_local_binary_pattern.html
-
         Parameters
         ----------
         n_points : int
@@ -110,16 +104,13 @@ class LBP:
         The lbp_featurizer function takes an image as input and returns a histogram of the local binary pattern
         of the image. The number of points is set to 1280, radius is set to 160, method is set to 'uniform', and normalize
         is set to True.
-
         References
         ----------
         https://stackoverflow.com/questions/51239715/compare-the-lbp-in-python
-
         Parameters
         ----------
         image : np.array
             Extract the channels from the image
-
         Returns
         -------
         list
@@ -139,12 +130,10 @@ class LBP:
         """
         The fit_transform function takes in a list of images and returns the LBP features for each image.
         The output is a numpy array with shape (num_images, grid_size[0], grid_size[1], num_features).
-
         Parameters
         ----------
         images: np.array or list
             Pass the list of images to be processed by the fit_transform function
-
         Returns
         -------
         list
@@ -182,12 +171,10 @@ class ORB:
         """
         The orb_featurizer function takes an image as input and returns a list of ORB descriptors.
         The number of descriptors is limited by the num_features parameter (defaults to 32).
-
         Parameters
         ----------
         image : np.array
             Pass in the grayscale image to be featurized of shape (height, width)
-
         Returns
         -------
         np.array
@@ -202,11 +189,9 @@ class ORB:
         The features are constructed by taking the ORB descriptors from each patch in an image,
         and then concatenating those together into one feature vector. The result is a matrix where
         each row corresponds to an image and contains all of its feature vectors.
-
         Parameters
         ----------
         images : Pass the images to the fit_transform function
-
         Returns
         -------
         list
@@ -245,12 +230,10 @@ class SIFT:
         """
         The sift_featurizer function takes an image as input and returns a list of SIFT descriptors.
         The number of descriptors is limited by the num_features parameter (defaults to 32).
-
         Parameters
         ----------
         image : np.array
             Pass in the grayscale image to be featurized of shape (height, width)
-
         Returns
         -------
         np.array
@@ -265,11 +248,9 @@ class SIFT:
         The features are constructed by taking the SIFT descriptors from each patch in an image,
         and then concatenating those together into one feature vector. The result is a matrix where
         each row corresponds to an image and contains all of its feature vectors.
-
         Parameters
         ----------
         images : Pass the images to the fit_transform function
-
         Returns
         -------
         list
