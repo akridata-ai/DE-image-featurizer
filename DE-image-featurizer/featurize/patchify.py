@@ -1,5 +1,8 @@
 """This py file contains the patchify function that is used to get sub-tiles of the images"""
 import numpy as np
+# To support numpy reshape ops on tensors directly:
+from tensorflow.python.ops.numpy_ops import np_config
+np_config.enable_numpy_behavior()
 
 
 def patchify(image, grid_shape):
