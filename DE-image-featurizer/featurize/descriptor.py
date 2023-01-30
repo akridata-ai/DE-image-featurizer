@@ -3,6 +3,10 @@ import numpy as np
 import cv2
 from skimage.feature import hog, local_binary_pattern
 
+# To support numpy reshape ops on tensors in `patchify` module:
+from tensorflow.python.ops.numpy_ops import np_config
+np_config.enable_numpy_behavior()
+
 from patchify import patchify
 
 
