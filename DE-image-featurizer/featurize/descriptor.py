@@ -60,13 +60,17 @@ class HOG:
         The fit_transform function takes in a list of images and returns the feature vectors for each image.
         Parameters
         ----------
-        images : np.array or list
-            Images for featurization
+        images : list or array of ndarrays of length n_images
+            Images to calculate features over.
+            If passing a single image, pass as array of shape (1, ...) or as list [img_arr].
+            
         Returns
         -------
-        np.array
-            A numpy array with the same shape as images, but instead of having a single channel
-            for each image, it has multiple channels
+        patch_feature_arr: ndarray of shape (n_images, grid_rows, grid_cols, n_features)
+            HOG features for each patch in each input image.
+            Traditionally, HOG descriptors are ndarrays. We call `hog` with `feature_vector=True`,
+                which flattens the descriptor into a 1d array. This is done for each patch, as identified by
+                self.grid_size.
         """
         for image in images:
             image_patches = patchify(image, self.grid_size)
@@ -77,7 +81,8 @@ class HOG:
 
             patch_feature_arr = np.stack(patch_feature_arr)
             patch_feature_arr = patch_feature_arr.reshape(*self.grid_size, *patch_feature_arr.shape[1:])
-            return patch_feature_arr
+            
+        return patch_feature_arr
 
 
 class LBP:
