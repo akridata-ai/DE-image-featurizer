@@ -72,6 +72,7 @@ class HOG:
                 which flattens the descriptor into a 1d array. This is done for each patch, as identified by
                 self.grid_size.
         """
+        features_all_images = []
         for image in images:
             image_patches = patchify(image, self.grid_size)
             patch_feature_arr = []
@@ -80,9 +81,10 @@ class HOG:
                     patch_feature_arr.append(self.hog_featurizer(patch_col))
 
             patch_feature_arr = np.stack(patch_feature_arr)
-            patch_feature_arr = patch_feature_arr.reshape(*self.grid_size, *patch_feature_arr.shape[1:])
+            patch_feature_arr = patch_feature_arr.reshape(1, *self.grid_size, *patch_feature_arr.shape[1:])
+            features_all_images.append(patch_feature_arr)
             
-        return patch_feature_arr
+        return np.concatenate(features_all_images, axis=0)
 
 
 class LBP:
