@@ -30,4 +30,4 @@ def patchify(image, grid_shape):
                           j * tile_size[1]:(j + 1) * tile_size[1], :]
             tiled_image[i][j] = cropped_img
 
-    return tiled_image.squeeze()
+    return tiled_image
