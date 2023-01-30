@@ -8,26 +8,63 @@ def patchify(image, grid_shape):
     It then divides the image into tiles of equal size, given by grid_shape.
     The function returns a numpy array containing all these tiles in a grid.
 
-    Args:
-        image: Pass the image to be tiled
-        grid_shape=(6: Define the number of tiles in each direction
-        6): Specify the size of the patches
+    Parameters
+    ----------
+    image: ndarray of shape (imrows, imcols, n_channels)
+        Image to be converted into tiles.
+            
+    grid_shape: 2-tuple of int
+        Grid to use for tiling, as (grows, gcols)
 
-    Returns:
-        A numpy array of shape (6, 6, tile_size[0], tile_size[0], 3), where the first two dimensions are the row and column index of each patch
-
+    Returns
+    -------
+    tiled_image: ndarray of shape (grows, gcols, imrows//grows, imcols//gcols, ...)
+        Tiled image.
+        
+    Examples
+    --------
+    Let's tile a simple numpy array.
+    >>> img = np.arange(24, dtype=int).reshape(4, 6)
+    >>> tiled_img = patchify(img, (2, 2))
+    >>> tiled_img[0, 0]
+    array([[0, 1, 2],
+           [6, 7, 8]])
+    >>> tiled_img[0, 1]
+    array([[ 3,  4,  5],
+           [ 9, 10, 11]])
     """
-    if len(image.shape) == 2:
-        image = image[:, :, np.newaxis]
     image_shape = image.shape
 
-    tile_size = (image_shape[0] // grid_shape[0], image_shape[1] // grid_shape[1])
-    tiled_image = np.empty((*grid_shape, *tile_size, image_shape[-1]), dtype='uint8')
+    if (image_shape[0] % grid_shape[0] != 0) or (image_shape[1] % grid_shape[1] != 0):
+        raise ValueError(
+            "Image rows and columns should be integer multiples of grid rows and cols.")
 
-    for i in range(grid_shape[0]):
-        for j in range(grid_shape[1]):
-            cropped_img = image[i * tile_size[0]:(i + 1) * tile_size[0],
-                          j * tile_size[1]:(j + 1) * tile_size[1], :]
-            tiled_image[i][j] = cropped_img
+    # For grayscale images, add an extra axis at the end to have consistent logic later.
+    if len(image.shape) == 2:
+        image = image[:, :, np.newaxis]
+        added_axis = True
+    else:
+        added_axis = False
 
-    return tiled_image.squeeze()
+    imrows, imcols = image_shape[0], image_shape[1]
+    grows, gcols = grid_shape[0], grid_shape[1]
+    
+    # We'll use numpy reshapes to do this.
+    # 1. Tile along columns.
+    tiled_image = image.reshape((1, imrows, gcols, imcols//gcols, -1))
+    # 2. Columns are already tiled. Move this away so that rows can be tiled next.
+    tiled_image = np.swapaxes(tiled_image, 1, 2)
+    # Rows in original image will be manipulated if we do another reshape now.
+    # 3. Tile rows,
+    tiled_image = tiled_image.reshape((grows, gcols, imrows//grows, imcols//gcols, -1))
+    
+    # If we added an axis previously for grayscale images, get rid of it.
+    if added_axis:
+        tiled_image = tiled_image.squeeze(axis=-1)
+    
+    return tiled_image
+
+if __name__ == "__main__":
+    import doctest
+    print("Running doctests...")
+    doctest.testmod()    
