@@ -1,14 +1,12 @@
-import sys
-import pathlib
+"""Provides the functinality to compare different image featurizers"""
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 import pandas as pd
 import tensorflow_hub as hub
-from tensorflow.keras import layers
 from ..featurize.descriptor import HOG, LBP, ORB, SIFT
 class ImageFeatureEvaluator:
     """
@@ -65,21 +63,27 @@ class ImageFeatureEvaluator:
         ```
 
     Let's try on a simple tensorflow dataset.
-    >>> dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
+    >>> import pathlib
+    >>> dataset_url = "https://storage.googleapis.com/" \
+    "download.tensorflow.org/example_images/flower_photos.tgz"
     >>> archive = tf.keras.utils.get_file(origin=dataset_url, extract=True)
     ...
     >>> data_dir = pathlib.Path(archive).with_suffix('')
-    >>> fan = ImageFeatureEvaluator(data_dir,'https://tfhub.dev/google/imagenet/mobilenet_v1_025_224/feature_vector/5',32,False)
+    >>> fan = ImageFeatureEvaluator(data_dir,\
+    'https://tfhub.dev/google/imagenet/mobilenet_v1_025_224/feature_vector/5',\
+    32,False)
 
     >>> train_ds, _ = fan.load_data()
     Found ...
     >>> featurizer, preprocessor = fan.load_featurizer()
-    >>> train_features, train_labels = fan.extract_features(featurizer,preprocessor,train_ds,True)
+    >>> train_features, train_labels = fan.extract_features(featurizer,\
+    preprocessor,train_ds,True)
     >>> train_features.shape
     (2936, 256)
     >>> fan = ImageFeatureEvaluator(data_dir,'hog',32,False)
     >>> featurizer, preprocessor = fan.load_featurizer()
-    >>> train_features, train_labels = fan.extract_features(featurizer,preprocessor,train_ds,True)
+    >>> train_features, train_labels = fan.extract_features(featurizer,\
+    preprocessor,train_ds,True)
     >>> train_features.shape
     (2936, 1568)
     """
@@ -92,7 +96,8 @@ class ImageFeatureEvaluator:
 
     def load_data(self):
         """
-        Creates training and testing dataset from a directory of images where labels are inferred from directory structure
+        Creates training and testing dataset from a directory
+        of images where labels are inferred from directory structure
 
         Returns
         -------
@@ -104,16 +109,14 @@ class ImageFeatureEvaluator:
         """
         if self.structure:
             train_ds = tf.keras.utils.image_dataset_from_directory(self.data_path + '/train',
-                                                                   seed=123, batch_size=self.batch_size)
+            seed=123, batch_size=self.batch_size)
             val_ds = tf.keras.utils.image_dataset_from_directory(self.data_path + '/test',
-                                                                 seed=123, batch_size=self.batch_size)
+            seed=123, batch_size=self.batch_size)
         else:
-            train_ds = tf.keras.utils.image_dataset_from_directory(self.data_path, validation_split=0.2,
-                                                                   subset='training',
-                                                                   seed=123, batch_size=self.batch_size)
-            val_ds = tf.keras.utils.image_dataset_from_directory(self.data_path, validation_split=0.2,
-                                                                 subset='validation',
-                                                                 seed=123, batch_size=self.batch_size)
+            train_ds = tf.keras.utils.image_dataset_from_directory(self.data_path,
+            validation_split=0.2,subset='training',seed=123, batch_size=self.batch_size)
+            val_ds = tf.keras.utils.image_dataset_from_directory(self.data_path,
+            validation_split=0.2,subset='validation',seed=123, batch_size=self.batch_size)
         return train_ds, val_ds
 
     def evaluate(self):
@@ -133,9 +136,12 @@ class ImageFeatureEvaluator:
 
         train_ds, val_ds = self.load_data()
         featurizer, preprocessor = self.load_featurizer()
-        train_features, train_labels = self.extract_features(featurizer, preprocessor, train_ds, True)
-        test_features, test_labels = self.extract_features(featurizer, preprocessor, val_ds, False)
-        results_frame = self.accuracy_stats(train_features, test_features, train_labels, test_labels)
+        train_features, train_labels = self.extract_features(featurizer,
+                                        preprocessor, train_ds, True)
+        test_features, test_labels = self.extract_features(featurizer,
+                                        preprocessor, val_ds, False)
+        results_frame = self.accuracy_stats(train_features,
+                            test_features, train_labels, test_labels)
         return results_frame
 
     def feature_loader_and_provide_score(self, train_features_path, train_labels_path,
@@ -171,13 +177,15 @@ class ImageFeatureEvaluator:
         train_labels = np.load(train_labels_path)
         test_features = np.load(test_features_path)
         test_labels = np.load(test_labels_path)
-        results_frame = self.accuracy_stats(train_features, test_features, train_labels, test_labels)
+        results_frame = self.accuracy_stats(train_features,
+                            test_features, train_labels, test_labels)
 
         return results_frame
 
     def load_featurizer(self):
         """
-        Instantiates the model from TF-hub library or from the featurizers present in the DE-image-featurizer repository
+        Instantiates the model from TF-hub library or
+        from the featurizers present in the DE-image-featurizer repository
         and also creates a preprocessor to standardise the input.
 
         Returns
@@ -206,8 +214,8 @@ class ImageFeatureEvaluator:
         else:
             image_featurizer = hub.KerasLayer(self.featurizer_selected,
                                               input_shape=(224, 224, 3), trainable=False)
-        preprocessor = tf.keras.Sequential([layers.Resizing(224, 224),
-                                            layers.Rescaling(1. / 255)])
+        preprocessor = tf.keras.Sequential([tf.keras.layers.Resizing(224, 224),
+                                            tf.keras.layers.Rescaling(1. / 255)])
 
         return image_featurizer, preprocessor
 
@@ -250,8 +258,8 @@ class ImageFeatureEvaluator:
         for image_batch, labels_batch in tqdm(input_data):
             preprocessed_image_batch = preprocessor(image_batch)
             image_batch_features = image_featurizer(preprocessed_image_batch)
-            image_batch_features = image_batch_features if isinstance(image_batch_features,
-                                                                      list) else image_batch_features
+            image_batch_features = image_batch_features if \
+            isinstance(image_batch_features,list) else image_batch_features
             if features_array is None:
                 features_array = image_batch_features
             else:
@@ -270,14 +278,15 @@ class ImageFeatureEvaluator:
         features_array = features_array.squeeze()
 
         if features_array.ndim >= 3:
-            features_array = features_array.reshape(*features_array.shape[:(-features_array.ndim + 1)], -1)
+            features_array = features_array.reshape(*features_array.shape\
+                [:(-features_array.ndim + 1)], -1)
         return features_array, input_labels
 
     def accuracy_scores(self, train_features, train_labels,
-                        test_features, test_labels,
-                        n_neighbors):
+                        test_features, test_labels):
         """
-        Applies KNeighborsClassifier on the input data and return the accuracy obtained on training and testing sets.
+        Applies KNeighborsClassifier on the input data
+        and return the accuracy obtained on training and testing sets.
 
         Parameters
         ----------
@@ -294,9 +303,6 @@ class ImageFeatureEvaluator:
         test_labels : numpy.ndarray of shape (test_data_size,)
                 The labels for testing data
 
-        n_neighbors : numpy.ndarray
-            Number of neighbors to consider for classification
-
         Returns
         -------
 
@@ -308,7 +314,7 @@ class ImageFeatureEvaluator:
 
         """
 
-        classifier = KNeighborsClassifier(n_neighbors, weights="distance")
+        classifier = KNeighborsClassifier(weights="distance")
         # Fit the classifier on the Train Data
         classifier.fit(train_features, train_labels)
         # Train Predictions
@@ -325,7 +331,8 @@ class ImageFeatureEvaluator:
     def accuracy_stats(self, train_features, test_features,
                        train_labels, test_labels):
         """
-        Applies PCA on the data over several number of dimensions and return a consolidated evaluation statistics.
+        Applies PCA on the data over several number of
+        dimensions and return a consolidated evaluation statistics.
 
         Parameters
         ----------
@@ -355,12 +362,13 @@ class ImageFeatureEvaluator:
         train_accuracies = []
         test_accuracies = []
         dimensions = [2, 8, 16, 32, 64, 128]
-        for n in dimensions:
-            pca = PCA(n_components=n)
+        for dimension in dimensions:
+            pca = PCA(n_components=dimension)
             reduced_train_features = pca.fit_transform(train_features)
             reduced_test_features = pca.transform(test_features)
-            train_accuracy, test_accuracy = self.accuracy_scores(reduced_train_features, train_labels,
-                                                                 reduced_test_features, test_labels, 5)
+            train_accuracy, test_accuracy = self.accuracy_scores(reduced_train_features,
+            train_labels,
+            reduced_test_features, test_labels)
             train_accuracies.append(train_accuracy)
             test_accuracies.append(test_accuracy)
         results_frame = pd.DataFrame(list(zip(dimensions, train_accuracies, test_accuracies)),
