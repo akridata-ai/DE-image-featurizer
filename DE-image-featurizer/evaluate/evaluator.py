@@ -5,24 +5,26 @@ Creates a featurizer from tf-hub or traditional repositoy based models.
 Applies PCA to reduce feature dimensions.
 Provides KNN accuracy scores for different set of dimensions
 """
+# pylint: disable=wrong-import-position
 import sys
-import tensorflow as tf
-import numpy as np
-from tqdm import tqdm
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.decomposition import PCA
-import pandas as pd
-import tensorflow_hub as hub
 sys.path.append("")
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import tensorflow_hub as hub
+from sklearn.decomposition import PCA
+from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+from tqdm import tqdm
 from featurize.descriptor import HOG, LBP, ORB, SIFT
 
 
-
-DEF_N_COMPONENTS = [2, 8, 16, 32, 64, 128]  # Different number of components used during PCA.
+# Different number of components used during PCA.
+DEF_N_COMPONENTS = [2, 8, 16, 32, 64, 128]
 # The dictionary describing different traditional CV featurizer.
 FEATURIZER_DICT = {'hog': HOG(), 'lbp': LBP(), 'orb': ORB(), 'sift': SIFT()}
-SEED = 123  # Random seed for shuffling and transformations
+# Random seed for shuffling and transformations
+SEED = 123
 
 
 class ImageFeatureEvaluator:
@@ -129,15 +131,18 @@ class ImageFeatureEvaluator:
     containing different feature dimensions and the training
     and testing accuracies corresponding to them.
     >>> results = evaluator.evaluate()
-    >>> results.shape  # It has DEF_N_COMPONENTS number of rows
+
+     #It has DEF_N_COMPONENTS number of rows
+    >>> results.shape
     (6, 3)
-    >>> np.sort(results.columns) #List of columns present in the resultant dataframe
+
+    List of columns present in the resultant dataframe
+    >>> np.sort(results.columns)
     array(['Dimensions', 'Test_Accuracy', 'Train_Accuracy'], dtype=object)
     """
 
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
-
     def __init__(self, data_dir, featurizer='hog', batch_size=32,
                  validation_split=0.2, splits=False, save_features=False):
         """
@@ -213,26 +218,17 @@ class ImageFeatureEvaluator:
             Numpy array containing corresponding labels
 
         """
-        features_array = None
-        input_labels = None
+        features_array = []
+        input_labels = []
         input_data = self.train_ds if is_train else self.val_ds
         for image_batch, labels_batch in tqdm(input_data):
             preprocessed_image_batch = self.preprocessor(image_batch)
             image_batch_features = self.featurizer(preprocessed_image_batch)
-            if features_array is None:
-                features_array = image_batch_features
-            else:
-                features_array = np.vstack((features_array, image_batch_features))
-            if input_labels is None:
-                input_labels = labels_batch
-            else:
-                input_labels = np.concatenate([input_labels, labels_batch.numpy()])
-
-        if features_array is None:
-            raise TypeError
-
-        if features_array.ndim >= 3:
-            features_array = features_array.reshape(*features_array.
+            features_array.extend(image_batch_features)
+            input_labels.extend(labels_batch)
+        features_array = np.asarray(features_array)
+        input_labels = np.asarray(input_labels)
+        features_array = features_array.reshape(*features_array.
                                                     shape[:(-1 * features_array.ndim + 1)], -1)
         if self.save_features:
             if is_train:
