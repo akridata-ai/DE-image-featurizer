@@ -63,6 +63,9 @@ class ImageFeatureEvaluator:
     splits: boolean
         Whether the directory is further divided into train and test folders.
 
+    input_shape: tuple of shape(height,width)
+        The dimensions of image required by the image featurizer.
+
     train_ds:  A `tf.data.Dataset` object
         The training dataset.
 
@@ -123,8 +126,11 @@ class ImageFeatureEvaluator:
 
     We will use a model from tensorflow hub.
     The class will download the model using the url.
-    >>> MODEL_URL = 'https://tfhub.dev/google/imagenet/mobilenet_v1_025_224/feature_vector/5'
-    >>> evaluator = ImageFeatureEvaluator(data_dir,MODEL_URL,32,0.2,False)
+    >>> MODEL_URL = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_96/feature_vector/5'
+
+    The input shape dimensions according to the featurizer being used.
+    >>> input_shape = (96,96)
+    >>> evaluator = ImageFeatureEvaluator(data_dir,MODEL_URL,32,input_shape,0.2,False)
     Found...
 
     The results will be returned as a dataframe
@@ -143,12 +149,13 @@ class ImageFeatureEvaluator:
 
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
-    def __init__(self, data_dir, featurizer='hog', batch_size=32,
+    def __init__(self, data_dir, featurizer='hog', batch_size=32, input_shape=(224, 224),
                  validation_split=0.2, splits=False, save_features=False):
         """
         Constructor for the ImageFeatureEvaluator class
         """
         self.batch_size = batch_size
+        self.input_shape = input_shape
         self.validation_split = validation_split
         self.splits = splits
         self._load_data(data_dir)
@@ -196,8 +203,8 @@ class ImageFeatureEvaluator:
             self.featurizer = FEATURIZER_DICT[featurizer.lower()].fit_transform
         else:
             self.featurizer = hub.KerasLayer(featurizer,
-                                             input_shape=(224, 224, 3), trainable=False)
-        self.preprocessor = tf.keras.Sequential([tf.keras.layers.Resizing(224, 224),
+                                             input_shape=(*self.input_shape,3), trainable=False)
+        self.preprocessor = tf.keras.Sequential([tf.keras.layers.Resizing(*self.input_shape),
                                                  tf.keras.layers.Rescaling(1. / 255)])
 
     def _extract_features(self, is_train):
