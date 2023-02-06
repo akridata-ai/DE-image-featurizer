@@ -7,7 +7,7 @@ from skimage.feature import hog, local_binary_pattern
 from tensorflow.python.ops.numpy_ops import np_config
 np_config.enable_numpy_behavior()
 
-from patchify import patchify
+from .patchify import patchify
 
 
 class HOG:
