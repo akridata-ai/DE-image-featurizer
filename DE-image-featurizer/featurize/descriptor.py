@@ -1,4 +1,5 @@
 """https://www.sciencedirect.com/science/article/pii/S0030402620306690"""
+import warnings
 import numpy as np
 import cv2
 from skimage.feature import hog, local_binary_pattern
@@ -192,7 +193,15 @@ class ORB:
             Feature matrix of the image
         """
         _, descriptors = self.orb.detectAndCompute(image, None)
-        return descriptors[:self.num_features]
+        if descriptors is None:
+            warnings.warn('No ORB features found returning zero-array.')
+            descriptors = np.zeros((self.num_features, 32))
+        elif len(descriptors) < self.num_features:
+            padding = self.num_features - len(descriptors)
+            descriptors = np.pad(descriptors, [(0, padding), (0, 0)], mode='constant', constant_values=0)
+        else:
+            descriptors = descriptors[:self.num_features]
+        return descriptors
 
     def fit_transform(self, images):
         """
