@@ -22,7 +22,7 @@ from featurize.descriptor import HOG, LBP, ORB, SIFT
 # Different number of components used during PCA.
 DEF_N_COMPONENTS = [2, 8, 16, 32, 64, 128]
 # The dictionary describing different traditional CV featurizer.
-FEATURIZER_DICT = {'hog': HOG(), 'lbp': LBP(), 'orb': ORB(), 'sift': SIFT()}
+FEATURIZER_DICT = {'hog': HOG(), 'lbp': LBP(), 'orb': ORB(num_features=100), 'sift': SIFT()}
 # Random seed for shuffling and transformations
 SEED = 123
 
@@ -63,14 +63,14 @@ class ImageFeatureEvaluator:
     splits: boolean
         Whether the directory is further divided into train and test folders.
 
-    input_shape: tuple of shape(height,width)
-        The dimensions of image required by the image featurizer.
-
     train_ds:  A `tf.data.Dataset` object
         The training dataset.
 
     val_ds:  A `tf.data.Dataset` object
         The testing dataset.
+
+    traditional: boolean
+        Whether the featurizer is traditional or tf_hub based
 
     save_features: boolean
         Whether to save the extracted features in present working directory.
@@ -126,36 +126,29 @@ class ImageFeatureEvaluator:
 
     We will use a model from tensorflow hub.
     The class will download the model using the url.
-    >>> MODEL_URL = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_96/feature_vector/5'
-
-    The input shape dimensions according to the featurizer being used.
-    >>> input_shape = (96,96)
-    >>> evaluator = ImageFeatureEvaluator(data_dir,MODEL_URL,32,input_shape,0.2,False)
+    >>> MODEL_URL = 'https://tfhub.dev/google/imagenet/mobilenet_v1_025_224/feature_vector/5'
+    >>> evaluator = ImageFeatureEvaluator(data_dir,"orb",32,0.2,False)
     Found...
 
     The results will be returned as a dataframe
     containing different feature dimensions and the training
     and testing accuracies corresponding to them.
     >>> results = evaluator.evaluate()
-
-     #It has DEF_N_COMPONENTS number of rows
-    >>> results.shape
+    >>> results.shape  # It has DEF_N_COMPONENTS number of rows
     (6, 3)
-
-    List of columns present in the resultant dataframe
-    >>> np.sort(results.columns)
+    >>> np.sort(results.columns) #List of columns present in the resultant dataframe
     array(['Dimensions', 'Test_Accuracy', 'Train_Accuracy'], dtype=object)
     """
 
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
-    def __init__(self, data_dir, featurizer='hog', batch_size=32, input_shape=(224, 224),
+
+    def __init__(self, data_dir, featurizer='hog', batch_size=32,
                  validation_split=0.2, splits=False, save_features=False):
         """
         Constructor for the ImageFeatureEvaluator class
         """
         self.batch_size = batch_size
-        self.input_shape = input_shape
         self.validation_split = validation_split
         self.splits = splits
         self._load_data(data_dir)
@@ -200,11 +193,13 @@ class ImageFeatureEvaluator:
             Accepted values for names are 'hog', 'lbp', 'orb' and 'sift'.
         """
         if featurizer.lower() in FEATURIZER_DICT:
+            self.traditional = True
             self.featurizer = FEATURIZER_DICT[featurizer.lower()].fit_transform
         else:
+            self.traditional = False
             self.featurizer = hub.KerasLayer(featurizer,
-                                             input_shape=(*self.input_shape,3), trainable=False)
-        self.preprocessor = tf.keras.Sequential([tf.keras.layers.Resizing(*self.input_shape),
+                                             input_shape=(224, 224, 3), trainable=False)
+            self.preprocessor = tf.keras.Sequential([tf.keras.layers.Resizing(224, 224),
                                                  tf.keras.layers.Rescaling(1. / 255)])
 
     def _extract_features(self, is_train):
@@ -229,7 +224,10 @@ class ImageFeatureEvaluator:
         input_labels = []
         input_data = self.train_ds if is_train else self.val_ds
         for image_batch, labels_batch in tqdm(input_data):
-            preprocessed_image_batch = self.preprocessor(image_batch)
+            if self.traditional:
+                preprocessed_image_batch = image_batch.numpy().astype(np.uint8)
+            else:
+                preprocessed_image_batch = self.preprocessor(image_batch)
             image_batch_features = self.featurizer(preprocessed_image_batch)
             features_array.extend(image_batch_features)
             input_labels.extend(labels_batch)
