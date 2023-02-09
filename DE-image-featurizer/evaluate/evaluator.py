@@ -69,6 +69,9 @@ class ImageFeatureEvaluator:
     train_ds:  A `tf.data.Dataset` object
         The training dataset.
 
+    traditional: boolean
+        Whether the featurizer is traditional or tf_hub based
+
     val_ds:  A `tf.data.Dataset` object
         The testing dataset.
 
@@ -130,7 +133,7 @@ class ImageFeatureEvaluator:
 
     The input shape dimensions according to the featurizer being used.
     >>> input_shape = (96,96)
-    >>> evaluator = ImageFeatureEvaluator(data_dir,MODEL_URL,32,input_shape,0.2,False)
+    >>> evaluator = ImageFeatureEvaluator(data_dir,'orb',32,input_shape,0.2,False)
     Found...
 
     The results will be returned as a dataframe
@@ -200,8 +203,10 @@ class ImageFeatureEvaluator:
             Accepted values for names are 'hog', 'lbp', 'orb' and 'sift'.
         """
         if featurizer.lower() in FEATURIZER_DICT:
+            self.traditional = True
             self.featurizer = FEATURIZER_DICT[featurizer.lower()].fit_transform
         else:
+            self.traditional = False
             self.featurizer = hub.KerasLayer(featurizer,
                                              input_shape=(*self.input_shape,3), trainable=False)
         self.preprocessor = tf.keras.Sequential([tf.keras.layers.Resizing(*self.input_shape),
@@ -229,7 +234,10 @@ class ImageFeatureEvaluator:
         input_labels = []
         input_data = self.train_ds if is_train else self.val_ds
         for image_batch, labels_batch in tqdm(input_data):
-            preprocessed_image_batch = self.preprocessor(image_batch)
+            if self.traditional:
+                preprocessed_image_batch = image_batch.numpy().astype(np.uint8)
+            else:
+                preprocessed_image_batch = self.preprocessor(image_batch)
             image_batch_features = self.featurizer(preprocessed_image_batch)
             features_array.extend(image_batch_features)
             input_labels.extend(labels_batch)
