@@ -205,7 +205,7 @@ class ORB:
 
     def fit_transform(self, images):
         """
-        The fit_transform function takes in a list of images and returns the features for each image.
+        The fit_transform function takes in a list of RGB images and returns the features for each image.
         The features are constructed by taking the ORB descriptors from each patch in an image,
         and then concatenating those together into one feature vector. The result is a matrix where
         each row corresponds to an image and contains all of its feature vectors.
@@ -219,7 +219,7 @@ class ORB:
         """
         features = []
         for image in images:
-            grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            grayscale_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             image_patches = patchify(grayscale_image, self.grid_size)
             patch_feature_arr = []
             for patch_row in image_patches:
@@ -264,7 +264,7 @@ class SIFT:
 
     def fit_transform(self, images):
         """
-        The fit_transform function takes in a list of images and returns the features for each image.
+        The fit_transform function takes in a list of RGB images and returns the features for each image.
         The features are constructed by taking the SIFT descriptors from each patch in an image,
         and then concatenating those together into one feature vector. The result is a matrix where
         each row corresponds to an image and contains all of its feature vectors.
@@ -278,7 +278,7 @@ class SIFT:
         """
         features = []
         for image in images:
-            grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            grayscale_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             image_patches = patchify(grayscale_image, self.grid_size)
             patch_feature_arr = []
             for patch_row in image_patches:
