@@ -22,7 +22,7 @@ from featurize.descriptor import HOG, LBP, ORB, SIFT
 # Different number of components used during PCA.
 DEF_N_COMPONENTS = [2, 8, 16, 32, 64, 128]
 # The dictionary describing different traditional CV featurizer.
-FEATURIZER_DICT = {'hog': HOG(), 'lbp': LBP(), 'orb': ORB(), 'sift': SIFT()}
+FEATURIZER_DICT = {'hog': HOG, 'lbp': LBP, 'orb': ORB, 'sift': SIFT}
 # Random seed for shuffling and transformations
 SEED = 123
 
@@ -48,6 +48,10 @@ class ImageFeatureEvaluator:
 
     splits: boolean, default=False
         Whether the directory is further divided into train and test folders.
+
+    num_features : int
+            Set the number of features to be extracted for each image
+            (applicable to ORB and SIFT featurizers).
 
     save_features: boolean
         Whether to save the extracted features in present working directory.
@@ -87,7 +91,8 @@ class ImageFeatureEvaluator:
 
     Examples
     ----------
-    Select the path to the dataset where the training and testing set are divided as given below
+    Select the path to the dataset where the training and
+    testing set are divided as given below
     if splits==False
 
         ```
@@ -133,7 +138,7 @@ class ImageFeatureEvaluator:
 
     The input shape dimensions according to the featurizer being used.
     >>> input_shape = (96,96)
-    >>> evaluator = ImageFeatureEvaluator(data_dir,'orb',32,input_shape,0.2,False)
+    >>> evaluator = ImageFeatureEvaluator(data_dir,'hog',32,input_shape,0.2,False)
     Found...
 
     The results will be returned as a dataframe
@@ -153,7 +158,7 @@ class ImageFeatureEvaluator:
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
     def __init__(self, data_dir, featurizer='hog', batch_size=32, input_shape=(224, 224),
-                 validation_split=0.2, splits=False, save_features=False):
+                 validation_split=0.2, splits=False,num_features=32, save_features=False):
         """
         Constructor for the ImageFeatureEvaluator class
         """
@@ -162,7 +167,7 @@ class ImageFeatureEvaluator:
         self.validation_split = validation_split
         self.splits = splits
         self._load_data(data_dir)
-        self._load_featurizer(featurizer)
+        self._load_featurizer(featurizer,num_features)
         self.save_features = save_features
 
     def _load_data(self, data_dir):
@@ -190,7 +195,7 @@ class ImageFeatureEvaluator:
                                                     subset='validation',
                                                     seed=SEED, batch_size=self.batch_size)
 
-    def _load_featurizer(self, featurizer):
+    def _load_featurizer(self, featurizer,num_features=32):
         """
         Instantiates the model from TF-hub library or
         from the featurizers present in the DE-image-featurizer repository
@@ -201,10 +206,17 @@ class ImageFeatureEvaluator:
         featurizer: string
             Name of a traditional CV featurizer, or URL to a tf-hub featurizer model.
             Accepted values for names are 'hog', 'lbp', 'orb' and 'sift'.
+
+        num_features : int
+            Set the number of features to be extracted for each image
+            (applicable to ORB and SIFT featurizers).
         """
         if featurizer.lower() in FEATURIZER_DICT:
             self.traditional = True
-            self.featurizer = FEATURIZER_DICT[featurizer.lower()].fit_transform
+            if featurizer.lower() in ['sift', 'orb']:
+                self.featurizer = FEATURIZER_DICT[featurizer.lower()](num_features=num_features).fit_transform
+            else:
+                self.featurizer = FEATURIZER_DICT[featurizer.lower()]().fit_transform
         else:
             self.traditional = False
             self.featurizer = hub.KerasLayer(featurizer,
