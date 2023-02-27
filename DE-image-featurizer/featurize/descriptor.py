@@ -11,6 +11,47 @@ np_config.enable_numpy_behavior()
 from .patchify import patchify
 
 
+def shi_tomasi_keypoints(gray_image, max_keypoints=100, threshold=0.001, min_distance=7):
+    """
+    The shi_tomasi_keypoints function takes in a grayscale image and returns an array of keypoints.
+    The function uses the OpenCV implementation of Shi-Tomasi corner detection to find the strongest corners
+    in the image. The function also sets some parameters for how many keypoints are found, as well as
+    how strong they are at detecting a corner.
+    If no shi-tomasi coners are found we return random keypoints.
+    Parameters
+    ----------
+    gray_image : np.array
+        2D grayscale image to be used for corner detection
+    max_keypoints : int
+        Set the maximum number of keypoints to be found in the image
+    threshold : float
+        Determine the minimum quality of corner points
+    min_distance : int
+        Specify the minimum distance between any two corners detected
+    Returns
+    -------
+    list
+        List of keypoints in np.array
+    """
+    if threshold <= 0:
+        warnings.warn("Cannot set threshold value <= 0 in Shi Tomasi Keypoints function. "
+                      "Setting value to 0.001")
+        threshold = 0.001
+
+    corners = cv2.goodFeaturesToTrack(gray_image,
+                                      maxCorners=max_keypoints,
+                                      qualityLevel=threshold,
+                                      minDistance=min_distance)
+    if corners is None:
+        warnings.warn("No keypoints found by SIFT or Shi-Tomasi, returning random keypoints.")
+        height_pt = np.random.randint(0, gray_image.shape[0], (max_keypoints,))
+        width_pt = np.random.randint(0, gray_image.shape[1], (max_keypoints,))
+        return [cv2.KeyPoint(float(x[1]), float(x[0]), 13) for x in zip(height_pt, width_pt)]
+
+    corners = np.int0(corners)
+    return [cv2.KeyPoint(float(x[1]), float(x[0]), 13) for x in corners.reshape(-1, 2)]
+
+
 class HOG:
     def __init__(self, orientations=8, pixels_per_cell=(16, 16),
                  cells_per_block=(1, 1), grid_size=(1, 1)):
@@ -89,7 +130,7 @@ class HOG:
 
 
 class LBP:
-    def __init__(self, n_bins=257, n_points=8, radius=1, method='default', grid_size=(1, 1)):
+    def __init__(self, n_bins=256, n_points=8, radius=1, method='default', grid_size=(1, 1)):
         """
         References
         ----------
@@ -114,7 +155,7 @@ class LBP:
     def lbp_featurizer(self, image):
         """
         The lbp_featurizer function takes an image as input and returns a histogram of the local binary pattern
-        of the image. The number of points is set to 1280, radius is set to 160, method is set to 'uniform', and normalize
+        of the image. The number of points is set to 8, radius is set to 1, method is set to 'uniform', and normalize
         is set to True.
         References
         ----------
@@ -166,7 +207,7 @@ class LBP:
 
 
 class ORB:
-    def __init__(self, num_features=32, grid_size=(1, 1)):
+    def __init__(self, num_features=32, grid_size=(1, 1), fastThreshold=31, edgeThreshold=31):
         """
         Parameters
         ----------
@@ -174,10 +215,17 @@ class ORB:
             Set the number of ORB features to be extracted for each image
         grid_size : tuple
             Determine the grid size of the patches
+        fastThreshold : int
+            Determine the FAST threshold
+        edgeThreshold : int
+            Determine the harris corner threshold
+
         """
         self.grid_size = grid_size
         self.num_features = num_features
-        self.orb = cv2.ORB_create(nfeatures=self.num_features)
+        self.orb = cv2.ORB_create(nfeatures=self.num_features,
+                                  fastThreshold=fastThreshold,
+                                  edgeThreshold=edgeThreshold)
 
     def orb_featurizer(self, image):
         """
@@ -193,14 +241,6 @@ class ORB:
             Feature matrix of the image
         """
         _, descriptors = self.orb.detectAndCompute(image, None)
-        if descriptors is None:
-            warnings.warn('No ORB features found returning zero-array.')
-            descriptors = np.zeros((self.num_features, 32))
-        elif len(descriptors) < self.num_features:
-            padding = self.num_features - len(descriptors)
-            descriptors = np.pad(descriptors, [(0, padding), (0, 0)], mode='constant', constant_values=0)
-        else:
-            descriptors = descriptors[:self.num_features]
         return descriptors
 
     def fit_transform(self, images):
@@ -260,7 +300,22 @@ class SIFT:
             Feature matrix of the image
         """
         _, descriptors = self.sift.detectAndCompute(image, None)
-        return descriptors[:self.num_features]
+        if descriptors is None:
+            warnings.warn('No SIFT features found returning Shi-Tomasi features.')
+            key_points = shi_tomasi_keypoints(image, max_keypoints=self.num_features)
+            _, descriptors = self.sift.compute(image, key_points)
+
+        elif len(descriptors) < self.num_features:
+            warnings.warn("SIFT wasn't able to generate specified number of features. "
+                          "Padding feature array using Shi-Tomasi for desired number of features")
+            padding = self.num_features - len(descriptors)
+            key_points = shi_tomasi_keypoints(image, max_keypoints=padding)
+            _, descriptors_pad = self.sift.compute(image, key_points)
+            descriptors = np.concatenate((descriptors, descriptors_pad), axis=0)
+
+        else:
+            descriptors = descriptors[:self.num_features]
+        return descriptors
 
     def fit_transform(self, images):
         """
