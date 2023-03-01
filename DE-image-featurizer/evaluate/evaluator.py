@@ -55,6 +55,10 @@ class ImageFeatureEvaluator:
 
     save_features: boolean
         Whether to save the extracted features in present working directory.
+    fastThreshold : int
+            Determine the FAST threshold(used in case of ORB featurizer)
+    edgeThreshold : int
+            Determine the harris corner threshold(used in case of orb featurizer.)
 
     Attributes
     ----------
@@ -138,7 +142,7 @@ class ImageFeatureEvaluator:
 
     The input shape dimensions according to the featurizer being used.
     >>> input_shape = (96,96)
-    >>> evaluator = ImageFeatureEvaluator(data_dir,'hog',32,input_shape,0.2,False)
+    >>> evaluator = ImageFeatureEvaluator(data_dir,'orb',20,input_shape,0.2,False,edgeThreshold=15,fastThreshold=15)
     Found...
 
     The results will be returned as a dataframe
@@ -158,7 +162,7 @@ class ImageFeatureEvaluator:
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
     def __init__(self, data_dir, featurizer='hog', batch_size=32, input_shape=(224, 224),
-                 validation_split=0.2, splits=False,num_features=32, save_features=False):
+                 validation_split=0.2, splits=False,num_features=32, save_features=False,edgeThreshold=20,fastThreshold=20):
         """
         Constructor for the ImageFeatureEvaluator class
         """
@@ -167,7 +171,7 @@ class ImageFeatureEvaluator:
         self.validation_split = validation_split
         self.splits = splits
         self._load_data(data_dir)
-        self._load_featurizer(featurizer,num_features)
+        self._load_featurizer(featurizer,num_features,edgeThreshold,fastThreshold)
         self.save_features = save_features
 
     def _load_data(self, data_dir):
@@ -195,7 +199,7 @@ class ImageFeatureEvaluator:
                                                     subset='validation',
                                                     seed=SEED, batch_size=self.batch_size)
 
-    def _load_featurizer(self, featurizer,num_features=32):
+    def _load_featurizer(self, featurizer,num_features,edgeThreshold,fastThreshold):
         """
         Instantiates the model from TF-hub library or
         from the featurizers present in the DE-image-featurizer repository
@@ -213,8 +217,10 @@ class ImageFeatureEvaluator:
         """
         if featurizer.lower() in FEATURIZER_DICT:
             self.traditional = True
-            if featurizer.lower() in ['sift', 'orb']:
+            if featurizer.lower()=='sift':
                 self.featurizer = FEATURIZER_DICT[featurizer.lower()](num_features=num_features).fit_transform
+            elif featurizer.lower()=='orb':
+                self.featurizer = FEATURIZER_DICT[featurizer.lower()](num_features=num_features,edgeThreshold=edgeThreshold,fastThreshold=fastThreshold).fit_transform
             else:
                 self.featurizer = FEATURIZER_DICT[featurizer.lower()]().fit_transform
         else:
