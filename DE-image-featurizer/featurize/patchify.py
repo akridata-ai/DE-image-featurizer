@@ -12,7 +12,7 @@ def patchify(image, grid_shape):
     ----------
     image: ndarray of shape (imrows, imcols, n_channels)
         Image to be converted into tiles.
-            
+
     grid_shape: 2-tuple of int
         Grid to use for tiling, as (grows, gcols)
 
@@ -20,7 +20,7 @@ def patchify(image, grid_shape):
     -------
     tiled_image: ndarray of shape (grows, gcols, imrows//grows, imcols//gcols, ...)
         Tiled image.
-        
+
     Examples
     --------
     Let's tile a simple numpy array.
@@ -48,21 +48,19 @@ def patchify(image, grid_shape):
 
     imrows, imcols = image_shape[0], image_shape[1]
     grows, gcols = grid_shape[0], grid_shape[1]
-    
+
     # We'll use numpy reshapes to do this.
-    # 1. Tile along columns.
-    tiled_image = image.reshape((1, imrows, gcols, imcols//gcols, -1))
-    # 2. Columns are already tiled. Move this away so that rows can be tiled next.
+    # 1. Tile along columns and rows.
+    tiled_image = image.reshape((grows, imrows // grows, gcols, imcols // gcols, -1))
+    # 2. Swap axis for rows grid rows and cols.
     tiled_image = np.swapaxes(tiled_image, 1, 2)
-    # Rows in original image will be manipulated if we do another reshape now.
-    # 3. Tile rows,
-    tiled_image = tiled_image.reshape((grows, gcols, imrows//grows, imcols//gcols, -1))
-    
+
     # If we added an axis previously for grayscale images, get rid of it.
     if added_axis:
         tiled_image = tiled_image.squeeze(axis=-1)
-    
+
     return tiled_image
+
 
 if __name__ == "__main__":
     import doctest
